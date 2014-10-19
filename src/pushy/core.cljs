@@ -82,31 +82,30 @@
      (push-state! dispatch-fn match-fn identity))
 
   ([dispatch-fn match-fn identity-fn]
-     (if (supported? js/window)
-       ;; We want to call `dispatch-fn` on any change to the location
-       (events/listen history EventType.NAVIGATE
-                      #(-> (.-token %) match-fn identity-fn dispatch-fn))
+     ;; We want to call `dispatch-fn` on any change to the location
+     (events/listen history EventType.NAVIGATE
+                    #(-> (.-token %) match-fn identity-fn dispatch-fn))
 
-       ;; Dispatch on initialization
-       (when-let [match (match-fn (get-token))]
-         (-> match identity-fn dispatch-fn))
+     ;; Dispatch on initialization
+     (when-let [match (match-fn (get-token))]
+       (-> match identity-fn dispatch-fn))
 
-       ;; Setup event listener on all 'click' events
-       (on-click
-        (fn [e]
-          (when-let [href (recur-href (-> e .-target))]
-            (let [path (->> href  (.parse Uri) (.getPath))]
-              ;; Proceed if `identity-fn` returns a value and
-              ;; the user did not trigger the event via one of the
-              ;; keys we should bypass
-              (when (and (identity-fn (match-fn path))
-                         ;; Bypass dispatch if any of these keys
-                         (not (.-altKey e))
-                         (not (.-ctrlKey e))
-                         (not (.-metaKey e))
-                         (not (.-shiftKey e))
-                         ;; Bypass dispatch if middle click
-                         (not= 1 (.-button e)))
-                ;; Dispatch!
-                (set-token! path (-> e .-target .-title))
-                (.preventDefault e)))))))))
+     ;; Setup event listener on all 'click' events
+     (on-click
+      (fn [e]
+        (when-let [href (recur-href (-> e .-target))]
+          (let [path (->> href  (.parse Uri) (.getPath))]
+            ;; Proceed if `identity-fn` returns a value and
+            ;; the user did not trigger the event via one of the
+            ;; keys we should bypass
+            (when (and (identity-fn (match-fn path))
+                       ;; Bypass dispatch if any of these keys
+                       (not (.-altKey e))
+                       (not (.-ctrlKey e))
+                       (not (.-metaKey e))
+                       (not (.-shiftKey e))
+                       ;; Bypass dispatch if middle click
+                       (not= 1 (.-button e)))
+              ;; Dispatch!
+              (set-token! path (-> e .-target .-title))
+              (.preventDefault e))))))))
