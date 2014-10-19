@@ -1,0 +1,4 @@
+lein: lein2
+language: clojure
+jdk:
+  - oraclejdk7
