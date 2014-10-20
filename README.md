@@ -6,7 +6,7 @@ A Clojurescript library for quick and easy HTML5 pushState.
 What it does:
 
 * Initializes `goog.history.HTML5History`
-* Adds an event watcher to the document's `click` event, which dispatches on all matched routes. Bypasses Alt, Shift, Meta, Ctrl keys as well as middle clicks.
+* Adds an event listener to all `click` events, which dispatches on all matched routes. Bypasses Alt, Shift, Meta, Ctrl keys as well as middle clicks.
 
 ## Install
 
@@ -72,6 +72,8 @@ It is also possible to set the history state by calling the `set-token!` functio
 ```clojure
 (set-token! "/foo")
 ```
+
+Likewise, you can call `replace-token!` which will also call the `dispatch` fn, but replaces the current history state without affecting the rest of the history stack.
 
 ## License
 
