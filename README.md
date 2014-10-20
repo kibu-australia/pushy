@@ -73,6 +73,8 @@ It is also possible to set the history state by calling the `set-token!` functio
 (set-token! "/foo")
 ```
 
+Likewise, you can call `replace-token!` which will also call the `dispatch` fn, but replaces the current history state without affecting the rest of the history stack.
+
 ## License
 
 Copyright © 2014
