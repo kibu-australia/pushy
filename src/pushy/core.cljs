@@ -84,11 +84,13 @@
   ([dispatch-fn match-fn identity-fn]
      ;; We want to call `dispatch-fn` on any change to the location
      (events/listen history EventType.NAVIGATE
-                    #(-> (.-token %) match-fn identity-fn dispatch-fn))
+                    (fn [e]
+                      (if-let [match (-> (.-token e) match-fn identity-fn)]
+                        (dispatch-fn match))))
 
      ;; Dispatch on initialization
-     (when-let [match (match-fn (get-token))]
-       (-> match identity-fn dispatch-fn))
+     (when-let [match (-> (get-token) match-fn identity-fn)]
+       (dispatch-fn match))
 
      ;; Setup event listener on all 'click' events
      (on-click
