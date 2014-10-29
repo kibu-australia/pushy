@@ -34,7 +34,7 @@ pushy should work with any routing library.
 ```clojure
   (ns foo.core
     (:require [secretary.core :as secretary :include-macros true :refer [defroute]]
-              [pushy.core :as pushy :refer [push-state!])
+              [pushy.core :as pushy :refer [push-state!]))
 
   (secretary/set-config! :prefix "/")
 
@@ -50,7 +50,7 @@ pushy should work with any routing library.
 ```clojure
   (ns foo.core
     (:require [bidi.bidi :as bidi]
-              [pushy.core :as pushy :refer [push-state!])
+              [pushy.core :as pushy :refer [push-state!]))
 
   (def state (atom {}))
 
