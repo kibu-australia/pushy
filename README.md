@@ -63,8 +63,6 @@ pushy should work with any routing library.
   (push-state! set-page! (partial bidi/match-route app-routes))
 ```
 
-Note: check out our fork of [bidi](https://github.com/kibu-australia/bidi) for an experimental cljx version.
-
 ### set-token!
 
 It is also possible to set the history state by calling the `set-token!` function. This will also call the `dispatch` fn on a successfully matched path.
