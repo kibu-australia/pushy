@@ -15,7 +15,8 @@
   This hack is because a user might click on a <span> nested in an <a> element"
   [target]
   (if (.-href target)
-    (.-href target)
+    (when-not (= "_blank" (.-target target))
+      (.-href target))
     (when (.-parentNode target)
       (recur-href (.-parentNode target)))))
 
