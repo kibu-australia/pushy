@@ -116,3 +116,9 @@
               ;; Dispatch!
               (set-token! path (-> target-href .-title))
               (.preventDefault e))))))))
+
+(defn unlisten!
+  "Closes the pushy event listeners"
+  [push-state]
+  (events/unlistenByKey push-state)
+  (events/unlisten history EventType.NAVIGATE))
