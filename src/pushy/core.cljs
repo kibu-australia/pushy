@@ -1,8 +1,8 @@
 (ns pushy.core
   (:require [goog.events :as events]
             [cljs.core.async.impl.protocols :as proto]
-            [cljs.core.async :as async :refer (chan <! >! put! close!)])
-  (:require-macros [cljs.core.async.macros :refer (go-loop)])
+            [cljs.core.async :as async :refer (chan <! >! put! close! mult tap)])
+  (:require-macros [cljs.core.async.macros :refer (go-loop alt!)])
   (:import goog.History
            goog.history.Html5History
            goog.history.Html5History.TokenTransformer
@@ -69,7 +69,35 @@
   (-replace-token! [this token])
   (-replace-token! [this token title]))
 
-(defn history-chan [read-ch write-ch history & [{:keys [on-close!]}]]
+(defprotocol IHook
+  (start [this pushy-ch])
+  (stop [this event]))
+
+(defn on-click! [pushy-ch]
+  (reify
+    IHook
+    (start [_]
+      (on-click
+       (fn [e]
+         (when-let [target-href (recur-href (-> e .-target))]
+           (let [path (->> target-href  (.parse Uri) (.getPath))]
+             ;; Proceed if `identity-fn` returns a value and
+             ;; the user did not trigger the event via one of the
+             ;; keys we should bypass
+             (when (and (not (.-altKey e))
+                        (not (.-ctrlKey e))
+                        (not (.-metaKey e))
+                        (not (.-shiftKey e))
+                        (not (= "_blank" (get-attribute target-href)))
+                        (not= 1 (.-button e)))
+               ;; Dispatch!
+               (do (put! pushy-ch (-> target-href .-title))
+                   (.preventDefault e))))))))
+
+    (stop [_ event]
+      (events/unlisten event))))
+
+(defn history-chan [read-ch write-ch close-ch history]
   (reify
     proto/ReadPort
     (take! [_ fn-handler]
@@ -83,9 +111,8 @@
     (close! [_]
       (do (proto/close! read-ch)
           (proto/close! write-ch)
-          (events/unlisten history EventType.NAVIGATE)
-          (when on-close!
-            (on-close!))))
+          (proto/close! close-ch)
+          (events/unlisten history EventType.NAVIGATE)))
 
     IToken
     (-set-token! [_ token]
@@ -101,45 +128,39 @@
     (-get-token [this]
       (.getToken history))
 
-    IDeref
+    cljs.core/IDeref
     (-deref [this]
       (-get-token this))))
 
-(defn click-event [pushy-ch]
-  (fn [e]
-    (when-let [target-href (recur-href (-> e .-target))]
-      (let [path (->> target-href  (.parse Uri) (.getPath))]
-        ;; Proceed if `identity-fn` returns a value and
-        ;; the user did not trigger the event via one of the
-        ;; keys we should bypass
-        (when (and (not (.-altKey e))
-                   (not (.-ctrlKey e))
-                   (not (.-metaKey e))
-                   (not (.-shiftKey e))
-                   (not (= "_blank" (get-attribute target-href)))
-                   (not= 1 (.-button e)))
-          ;; Dispatch!
-          (do (put! pushy-ch (-> target-href .-title))
-              (.preventDefault e)))))))
-
-(defn pushy-chan [read-xform write-xform]
-  (let [read-ch (chan 10 (map read-xform))
+(defn pushy-chan
+  [& [{:keys [read-xform write-xform hooks]
+       :or {read-xform (filter identity) write-xform (filter identity)}}]]
+  (let [read-ch (chan 10 (filter read-xform))
         write-ch (chan 10 (map write-xform))
         history (new-history)
-        click-ev (on-click (click-event write-ch))
-        history-ch (history-chan read-ch
-                                 write-ch
-                                 history
-                                 {:on-close! #(events/unlisten click-ev)})]
+        close-ch (chan)
+        history-ch (history-chan read-ch write-ch close-ch history)
+        hooks (map (fn [hook] (hook history-ch)) hooks)
+        hook-events (map (fn [hook] (start hook)) hooks)]
 
-    (go-loop []
-      (let [x (<! write-ch)]
-        (-set-token history-ch x)
-        (recur)))
+    (let [m (mult write-ch)
+          process-ch (chan)]
+      (tap m process-ch)
+      (go-loop []
+        (alt!
+          close-ch
+          ([_]
+             (doseq [[hook event] (interleave hooks hook-events)]
+               (stop hook event)))
+
+          process-ch
+          ([x]
+             (-set-token history-ch x)
+             (recur)))))
 
     (events/listen history EventType.NAVIGATE
                    #(put! read-ch (.-token %)))
 
-    (put! write-ch (get-token history-ch))
+    (put! write-ch @history-ch)
 
     history-ch))
