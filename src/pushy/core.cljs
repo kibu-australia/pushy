@@ -19,6 +19,9 @@
     (when (.-parentNode target)
       (recur-href (.-parentNode target)))))
 
+(defn- get-attribute [target]
+  (.getAttribute target))
+
 (defn- update-history! [h]
   (.setUseFragment h false)
   (.setPathPrefix h "")
@@ -95,8 +98,8 @@
      ;; Setup event listener on all 'click' events
      (on-click
       (fn [e]
-        (when-let [href (recur-href (-> e .-target))]
-          (let [path (->> href  (.parse Uri) (.getPath))]
+        (when-let [target-href (recur-href (-> e .-target))]
+          (let [path (->> target-href  (.parse Uri) (.getPath))]
             ;; Proceed if `identity-fn` returns a value and
             ;; the user did not trigger the event via one of the
             ;; keys we should bypass
@@ -106,8 +109,10 @@
                        (not (.-ctrlKey e))
                        (not (.-metaKey e))
                        (not (.-shiftKey e))
+                       ;; Bypass if target = _blank
+                       (not (= "_blank" (get-attribute target-href)))
                        ;; Bypass dispatch if middle click
                        (not= 1 (.-button e)))
               ;; Dispatch!
-              (set-token! path (-> e .-target .-title))
+              (set-token! path (-> target-href .-title))
               (.preventDefault e))))))))
