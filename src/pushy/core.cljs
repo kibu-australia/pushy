@@ -10,17 +10,12 @@
   (events/listen js/document "click" funk))
 
 (defn- recur-href
-  "Recursively find a href value
-
-  This hack is because a user might click on a <span> nested in an <a> element"
+  "Traverses up the DOM tree and returns the first node that contains a href attr"
   [target]
   (if (.-href target)
-    (.-href target)
+    target
     (when (.-parentNode target)
       (recur-href (.-parentNode target)))))
-
-(defn- get-attribute [target]
-  (.getAttribute target))
 
 (defn- update-history! [h]
   (.setUseFragment h false)
@@ -98,8 +93,9 @@
      ;; Setup event listener on all 'click' events
      (on-click
       (fn [e]
-        (when-let [target-href (recur-href (-> e .-target))]
-          (let [path (->> target-href  (.parse Uri) (.getPath))]
+        (when-let [el (recur-href (-> e .-target))]
+          (let [href (.-href el)
+                path (->> href (.parse Uri) .getPath)]
             ;; Proceed if `identity-fn` returns a value and
             ;; the user did not trigger the event via one of the
             ;; keys we should bypass
@@ -110,11 +106,11 @@
                        (not (.-metaKey e))
                        (not (.-shiftKey e))
                        ;; Bypass if target = _blank
-                       (not (= "_blank" (get-attribute target-href)))
+                       (not (= "_blank" (.getAttribute el "target")))
                        ;; Bypass dispatch if middle click
                        (not= 1 (.-button e)))
               ;; Dispatch!
-              (set-token! path (-> target-href .-title))
+              (set-token! path (-> el .-title))
               (.preventDefault e))))))))
 
 (defn unlisten!
