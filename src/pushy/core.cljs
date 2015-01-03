@@ -6,6 +6,9 @@
            goog.history.EventType
            goog.Uri))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Private + util
+
 (defn- on-click [funk]
   (events/listen js/document "click" funk))
 
@@ -40,85 +43,100 @@
           (str path-prefix token)))
   t)
 
-(def transformer
+(defn new-transformer []
   (-> (TokenTransformer.) set-retrieve-token! set-create-url!))
 
-(def history
-  (-> (Html5History. js/window transformer) update-history!))
+(defn new-history []
+  (-> (Html5History. js/window (new-transformer)) update-history!))
 
-(defn set-token!
-  "Sets the history state"
-  ([token]
-     (. history (setToken token)))
-  ([token title]
-     (. history (setToken token title))))
-
-(defn replace-token!
-  "Replaces the current history state without affecting the rest of the history stack"
-  ([token]
-     (. history (replaceToken token)))
-  ([token title]
-     (. history (replaceToken token title))))
-
-(defn get-token
-  "Returns the current token"
-  []
-  (.getToken history))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Public API
 
 (defn supported?
   "Returns whether Html5History is supported"
-  [window]
-  (.isSupported Html5History window))
+  ([] (supported? js/document))
+  ([window] (.isSupported Html5History window)))
 
-(defn push-state!
-  "Initializes push state using goog.history.Html5History
+(defprotocol IToken
+  (-set-token! [this token])
+  (-set-token! [this token title])
 
-  Adds an event listener to all click events and dispatches `dispatch-fn`
-  when the target element contains a href attribute that matches
-  any of the routes returned by `match-fn`
+  (-get-token [this])
 
-  Takes in three functions:
-    * dispatch-fn: the function that dispatches when a match is found
-    * match-fn: the function used to check if a particular route exists
-    * identity-fn: (optional) extract the route from value returned by match-fn"
-  ([dispatch-fn match-fn]
-     (push-state! dispatch-fn match-fn identity))
+  (-replace-token! [this token])
+  (-replace-token! [this token title]))
 
-  ([dispatch-fn match-fn identity-fn]
-     ;; We want to call `dispatch-fn` on any change to the location
-     (events/listen history EventType.NAVIGATE
-                    (fn [e]
-                      (if-let [match (-> (.-token e) match-fn identity-fn)]
-                        (dispatch-fn match))))
+(defn history-chan [read-ch write-ch history & [{:keys [on-close!]}]]
+  (reify
+    proto/ReadPort
+    (take! [_ fn-handler]
+      (proto/take! read-ch fn-handler))
 
-     ;; Dispatch on initialization
-     (when-let [match (-> (get-token) match-fn identity-fn)]
-       (dispatch-fn match))
+    proto/WritePort
+    (put! [this val fn-handler]
+      (do (proto/put! write-ch val fn-handler)))
 
-     ;; Setup event listener on all 'click' events
-     (on-click
-      (fn [e]
-        (when-let [target-href (recur-href (-> e .-target))]
-          (let [path (->> target-href  (.parse Uri) (.getPath))]
-            ;; Proceed if `identity-fn` returns a value and
-            ;; the user did not trigger the event via one of the
-            ;; keys we should bypass
-            (when (and (identity-fn (match-fn path))
-                       ;; Bypass dispatch if any of these keys
-                       (not (.-altKey e))
-                       (not (.-ctrlKey e))
-                       (not (.-metaKey e))
-                       (not (.-shiftKey e))
-                       ;; Bypass if target = _blank
-                       (not (= "_blank" (get-attribute target-href)))
-                       ;; Bypass dispatch if middle click
-                       (not= 1 (.-button e)))
-              ;; Dispatch!
-              (set-token! path (-> target-href .-title))
-              (.preventDefault e))))))))
+    proto/Channel
+    (close! [_]
+      (do (proto/close! read-ch)
+          (proto/close! write-ch)
+          (events/unlisten history EventType.NAVIGATE)
+          (when on-close!
+            (on-close!))))
 
-(defn unlisten!
-  "Closes the pushy event listeners"
-  [push-state]
-  (events/unlistenByKey push-state)
-  (events/unlisten history EventType.NAVIGATE))
+    IToken
+    (-set-token! [_ token]
+      (. history (setToken token)))
+    (-set-token! [_ token title]
+      (. history (setToken token title)))
+
+    (-replace-token! [_ token]
+      (. history (replaceToken token)))
+    (-replace-token! [_ token title]
+      (. history (replaceToken token title)))
+
+    (-get-token [this]
+      (.getToken history))
+
+    IDeref
+    (-deref [this]
+      (-get-token this))))
+
+(defn click-event [write-ch]
+  (fn [e]
+    (when-let [target-href (recur-href (-> e .-target))]
+      (let [path (->> target-href  (.parse Uri) (.getPath))]
+        ;; Proceed if `identity-fn` returns a value and
+        ;; the user did not trigger the event via one of the
+        ;; keys we should bypass
+        (when (and (not (.-altKey e))
+                   (not (.-ctrlKey e))
+                   (not (.-metaKey e))
+                   (not (.-shiftKey e))
+                   (not (= "_blank" (get-attribute target-href)))
+                   (not= 1 (.-button e)))
+          ;; Dispatch!
+          (do (put! write-ch (-> target-href .-title))
+              (.preventDefault e)))))))
+
+(defn pushy-chan [read-xform write-xform]
+  (let [read-ch (chan (map read-xform))
+        write-ch (chan (map write-xform))
+        history (new-history)
+        click-ev (on-click (click-event write-ch))
+        history-ch (history-chan read-ch
+                                 write-ch
+                                 history
+                                 {:on-close! #(events/unlisten click-ev)})]
+
+    (go-loop []
+      (let [x (<! write-ch)]
+        (-set-token history-ch x)
+        (recur)))
+
+    (events/listen history EventType.NAVIGATE
+                   #(put! read-ch (.-token %)))
+
+    (put! write-ch (get-token history-ch))
+
+    history-ch))
