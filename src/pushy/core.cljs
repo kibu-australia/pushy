@@ -1,5 +1,8 @@
 (ns pushy.core
-  (:require [goog.events :as events])
+  (:require [goog.events :as events]
+            [cljs.core.async.impl.protocols :as proto]
+            [cljs.core.async :as async :refer (chan <! >! put! close!)])
+  (:require-macros [cljs.core.async.macros :refer (go-loop)])
   (:import goog.History
            goog.history.Html5History
            goog.history.Html5History.TokenTransformer
@@ -102,7 +105,7 @@
     (-deref [this]
       (-get-token this))))
 
-(defn click-event [write-ch]
+(defn click-event [pushy-ch]
   (fn [e]
     (when-let [target-href (recur-href (-> e .-target))]
       (let [path (->> target-href  (.parse Uri) (.getPath))]
@@ -116,12 +119,12 @@
                    (not (= "_blank" (get-attribute target-href)))
                    (not= 1 (.-button e)))
           ;; Dispatch!
-          (do (put! write-ch (-> target-href .-title))
+          (do (put! pushy-ch (-> target-href .-title))
               (.preventDefault e)))))))
 
 (defn pushy-chan [read-xform write-xform]
-  (let [read-ch (chan (map read-xform))
-        write-ch (chan (map write-xform))
+  (let [read-ch (chan 10 (map read-xform))
+        write-ch (chan 10 (map write-xform))
         history (new-history)
         click-ev (on-click (click-event write-ch))
         history-ch (history-chan read-ch
