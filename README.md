@@ -49,7 +49,7 @@ pushy should work with any routing library:
                           (fn [x] (when (secretary/locate-route x) x))))
 
 ;; Start event listeners
-(pushy/init! history)
+(pushy/start! history)
 ```
 
 [Bidi](https://github.com/juxt/bidi)
@@ -70,7 +70,7 @@ pushy should work with any routing library:
 (def history
   (pushy/pushy set-page! (partial bidi/match-route app-routes)))
 
-(pushy/init! history)
+(pushy/start! history)
 ```
 
 ### goog.history.HTML5History methods
