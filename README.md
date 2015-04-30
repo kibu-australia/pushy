@@ -42,7 +42,7 @@ pushy should work with any routing library:
 
 (secretary/set-config! :prefix "/")
 
-(defroute index "/" []
+(defroute index "/foo" []
   (.log js/console "Hi"))
 
 (def history (pushy/pushy secretary/dispatch!
