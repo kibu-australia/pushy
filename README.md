@@ -57,7 +57,7 @@ pushy should work with any routing library:
 ```clojure
 (ns foo.core
   (:require [bidi.bidi :as bidi]
-            [pushy.core :as pushy))
+            [pushy.core :as pushy]))
 
 (def state (atom {}))
 
