@@ -121,3 +121,12 @@
   "Returns whether Html5History is supported"
   ([] (supported? js/window))
   ([window] (.isSupported Html5History window)))
+
+;; Backwards compatibility with pushy <= 0.2.2
+(defn push-state!
+  ([dispatch-fn match-fn]
+   (push-state! dispatch-fn match-fn identity))
+  ([dispatch-fn match-fn identity-fn]
+   (let [h (pushy dispatch-fn match-fn identity-fn)]
+     (start! h)
+     h)))
