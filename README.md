@@ -73,6 +73,27 @@ pushy should work with any routing library:
 (pushy/start! history)
 ```
 
+[Silk](https://github.com/DomKM/silk)
+
+```clojure
+(ns foo.core
+  (:require [domkm.silk :as silk]
+            [pushy.core :as pushy]))
+
+(def state (atom {}))
+
+(def app-routes
+  (silk/routes [[:foo [["/foo"]]]]))
+
+(defn set-page! [match]
+  (swap! state assoc :page match))
+
+(def history
+  (pushy/pushy set-page! (partial silk/arrive app-routes)))
+
+(pushy/start! history)
+```
+
 ### goog.history.HTML5History methods
 
 You can set the history state manually by calling the `set-token!` method. This will call the `dispatch` fn on a successfully matched path.
