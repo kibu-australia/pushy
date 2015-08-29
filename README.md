@@ -94,6 +94,12 @@ pushy should work with any routing library:
 (pushy/start! history)
 ```
 
+### URL handling
+
+By default pushy will dispatch on all relative URLs and absolute URLs that match the window's origin. This means that all external links will be bypassed.
+
+It is possible to specify which URLs are processable to pushy by specifying a custom predicate function `:processable-url?`. This function is passed a single argument which is an instance of `goog.URI`
+
 ### goog.history.HTML5History methods
 
 You can set the history state manually by calling the `set-token!` method. This will call the `dispatch` fn on a successfully matched path.
