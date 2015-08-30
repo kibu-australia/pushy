@@ -50,7 +50,7 @@
 
 (defn- processable-url? [uri]
   ;; By default only process relative URLs + URLs matching window's origin
-  (or (not (.hasDomain uri))
+  (or (and (not (.hasScheme uri)) (not (.hasDomain uri)))
       (some? (re-matches (re-pattern (str "^" (.-origin js/location) ".*$"))
                          (str uri)))))
 
