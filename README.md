@@ -18,7 +18,7 @@ You can construct a new instance by calling the `pushy` function.
 * `dispatch` fn: gets called when there is a match
 * `match` fn: checks if the path matches any routes defined.
 
-Optionally, you can pass in an `identity` fn which parses and returns the route based on the result of the `match` fn
+Optionally, you can specify an `:identity-fn` which parses and returns the route based on the result of the `match` fn. 
 
 ### Event listeners
 
