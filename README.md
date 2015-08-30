@@ -18,7 +18,7 @@ You can construct a new instance by calling the `pushy` function.
 * `dispatch` fn: gets called when there is a match
 * `match` fn: checks if the path matches any routes defined.
 
-Optionally, you can pass in an `identity` fn which parses and returns the route based on the result of the `match` fn
+Optionally, you can specify an `:identity-fn` which parses and returns the route based on the result of the `match` fn. 
 
 ### Event listeners
 
@@ -98,7 +98,7 @@ pushy should work with any routing library:
 
 By default pushy will dispatch on all relative URLs and absolute URLs that match the window's origin. This means that all external links will be bypassed.
 
-It is possible to specify which URLs are processable to pushy by specifying a custom predicate function `:processable-url?`. This function is passed a single argument which is an instance of `goog.URI`
+It is possible to specify which URLs are processable to pushy by specifying a custom predicate function `:processable-url?` in the constructor. This function is passed a single argument which is an instance of `goog.URI`.
 
 ### goog.history.HTML5History methods
 
