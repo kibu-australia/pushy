@@ -142,6 +142,6 @@
   ([dispatch-fn match-fn]
    (push-state! dispatch-fn match-fn identity))
   ([dispatch-fn match-fn identity-fn]
-   (let [h (pushy dispatch-fn match-fn identity-fn)]
+   (let [h (pushy dispatch-fn match-fn :identity-fn identity-fn)]
      (start! h)
      h)))
