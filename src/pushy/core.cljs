@@ -80,9 +80,9 @@
         (. history (setToken token title)))
 
       (replace-token! [_ token]
-        (. history (setToken token)))
+        (. history (replaceToken token)))
       (replace-token! [_ token title]
-        (. history (setToken token title)))
+        (. history (replaceToken token title)))
 
       (get-token [_]
         (.getToken history))
