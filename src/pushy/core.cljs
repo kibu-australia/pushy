@@ -49,10 +49,10 @@
   (stop! [this]))
 
 (defn- processable-url? [uri]
-  ;; By default only process relative URLs + URLs matching window's origin
-  (or (and (not (.hasScheme uri)) (not (.hasDomain uri)))
-      (some? (re-matches (re-pattern (str "^" (.-origin js/location) ".*$"))
-                         (str uri)))))
+  (and (not (clojure.string/blank? uri))                    ;; Blank URLs are not processable.
+       (or (and (not (.hasScheme uri)) (not (.hasDomain uri))) ;; By default only process relative URLs + URLs matching window's origin
+           (some? (re-matches (re-pattern (str "^" (.-origin js/location) ".*$"))
+                              (str uri))))))
 
 (defn- get-token-from-uri [uri]
   (let [path (.getPath uri)
