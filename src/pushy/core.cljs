@@ -115,7 +115,7 @@
                                  (not (.-metaKey e))
                                  (not (.-shiftKey e))
                                  ;; Bypass if target = _blank
-                                 (not (= "_blank" (.getAttribute el "target")))
+                                 (not (get #{"_blank" "_self"} (.getAttribute el "target")))
                                  ;; Bypass dispatch if middle click
                                  (not= 1 (.-button e)))
                         (let [next-token (get-token-from-uri uri)]
