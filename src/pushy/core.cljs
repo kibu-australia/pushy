@@ -120,8 +120,8 @@
                                  ;; Bypass if explicitly instructed to ignore this element
                                  (or (not (.hasAttribute el "data-pushy-ignore"))
                                      (= (.getAttribute el "data-pushy-ignore") "false"))
-                                 ;; Bypass dispatch if middle click
-                                 (not= 1 (.-button e)))
+                                 ;; Only dispatch on left button click
+                                 (= 0 (.-button e)))
                         (let [next-token (get-token-from-uri uri)]
                           (when (identity-fn (match-fn next-token))
                             ;; Dispatch!
