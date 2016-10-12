@@ -1,5 +1,6 @@
 (ns pushy.core
-  (:require [goog.events :as events])
+  (:require [goog.events :as events]
+            [clojure.string])
   (:import goog.History
            goog.history.Html5History
            goog.history.Html5History.TokenTransformer
