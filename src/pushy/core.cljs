@@ -21,7 +21,7 @@
 (defn- update-history! [h {:keys [use-fragment path-prefix]}]
   (doto h
     (.setUseFragment use-fragment)
-    (.setPathPrefix path-prefix)
+    (.setPathPrefix (or path-prefix ""))
     (.setEnabled true)))
 
 (defn- set-retrieve-token! [t]
