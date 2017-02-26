@@ -25,7 +25,7 @@
     (.setEnabled true)))
 
 (defn- set-retrieve-token! [t]
-  (set! (.. t -retrieveToken) 
+  (set! (.. t -retrieveToken)
         (fn [path-prefix location]
           (str (.-pathname location) (.-search location))))
   t)
@@ -70,7 +70,7 @@
 (defn setup-fragment-config
   "When `use-fragment' is true, configure pushy for this mode."
   [{:keys [use-fragment] :as cfg}]
-  (conj cfg (when use-fragment 
+  (conj cfg (when use-fragment
               {:token-transformer nil
                :uri->token-fn uri-fragment->token})))
 
