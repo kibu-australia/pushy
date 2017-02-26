@@ -41,9 +41,12 @@
       set-retrieve-token!
       set-create-url!))
 
-(defn new-history [{:keys [token-transformer] :as cfg}]
-  (-> (Html5History. js/window token-transformer)
-      (update-history! cfg)))
+(defn new-history
+  ([]
+   (new-history {:token-transformer (token-transformer)}))
+  ([{:keys [token-transformer] :as cfg}]
+   (-> (Html5History. js/window token-transformer)
+       (update-history! cfg))))
 
 (defprotocol IHistory
   (set-token! [this token] [this token title])
