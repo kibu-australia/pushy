@@ -6,10 +6,11 @@
    [secretary.core :as secretary :refer-macros [defroute]]
    [goog.events :as events]
    [cemerick.cljs.test :as t])
-  (:import goog.history.Html5History))
+  (:import goog.history.Html5History
+           goog.Uri))
 
 (secretary/set-config! :prefix "/")
-(def test-val (atom false))
+(def test-val (atom :fail))
 
 (def history
   (pushy/pushy secretary/dispatch!
@@ -17,10 +18,7 @@
                identity))
 
 (defroute foo-route "/foo" []
-  (reset! test-val true))
-
-(defroute bar-route "/bar" []
-  (reset! test-val true))
+  (reset! test-val :foo))
 
 (deftest constructing-history
   (is (instance? Html5History (pushy/new-history))))
@@ -31,14 +29,28 @@
 (deftest supported-browser
   (is (pushy/supported?)))
 
+(deftest fragment-to-token
+  (is (= "foo" (pushy/uri-fragment->token (Uri. "https://github.com/kibu-australia/pushy#foo")))))
+
+(deftest url-to-token
+  (is (= "/kibu-australia/pushy" (pushy/uri->token (Uri. "https://github.com/kibu-australia/pushy"))))
+  (is (= "/kibu-australia/pushy?foo=1" (pushy/uri->token (Uri. "https://github.com/kibu-australia/pushy?foo=1")))))
+
+(deftest test-setup-fragment
+  (let [non-frag {}
+        frag {:use-fragment true}]
+    (is (= non-frag (pushy/setup-fragment-config non-frag)))
+    (is (nil? (:token-transformer (pushy/setup-fragment-config frag))))
+    (is (:uri->token-fn (pushy/setup-fragment-config frag)))))
+
 ;; event listeners started = dispatch
 (deftest ^:async push-state-foo-route
-  (reset! test-val false)
+  (reset! test-val :fail)
   (pushy/start! history)
   (pushy/replace-token! history "/foo")
   (js/setTimeout
    (fn []
-     (is @test-val)
+     (is (= :foo @test-val))
      (is (nil? (pushy/stop! history)))
      (is (= "/foo" (pushy/get-token history)))
      (done))
@@ -46,11 +58,11 @@
 
 ;; no event listeners started = no dispatch
 (deftest ^:async push-state-bar-route
-  (reset! test-val false)
-  (pushy/replace-token! history "/bar")
+  (reset! test-val :fail)
+  (pushy/replace-token! history "/foo")
   (js/setTimeout
    (fn []
-     (is (false? @test-val))
-     (is (= "/bar" (pushy/get-token history)))
+     (is (= :fail @test-val))
+     (is (= "/foo" (pushy/get-token history)))
      (done))
    5000))
