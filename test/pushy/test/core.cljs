@@ -9,7 +9,6 @@
   (:import goog.history.Html5History
            goog.Uri))
 
-(secretary/set-config! :prefix "/")
 (def test-val (atom :fail))
 
 (def history
@@ -46,6 +45,7 @@
 ;; event listeners started = dispatch
 (deftest ^:async push-state-foo-route
   (reset! test-val :fail)
+  (secretary/set-config! :prefix "/")
   (pushy/start! history)
   (pushy/replace-token! history "/foo")
   (js/setTimeout
