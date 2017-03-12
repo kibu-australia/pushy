@@ -94,6 +94,38 @@ pushy should work with any routing library:
 (pushy/start! history)
 ```
 
+[Router](https://github.com/darkleaf/router)
+
+```clojure
+(ns foo.core
+  (:require [pushy.core :as pushy]
+            [darkleaf.router :as r]))
+
+(r/defcontroller root-controller
+  (show [_req]
+    :root))
+
+(r/defcontroller pages-controller
+  (index [_req]
+    :pages-index))
+
+(def routing
+  (r/group
+    (r/resource :root root-controller, :segment false)
+    (r/resources :pages :page pages-controller)))
+
+(def handler (r/make-handler routing))
+
+(def history (pushy/pushy (fn [response] (prn response))
+                          (fn [uri] (handler {:uri uri, :request-method :get}))))
+
+(pushy/start! history)
+
+#_(pushy/set-token! history "/")
+#_(pushy/set-token! history "/pages")
+            
+```
+
 ### URL handling
 
 By default pushy will dispatch on all relative URLs and absolute URLs that match the window's origin. This means that all external links will be bypassed.
