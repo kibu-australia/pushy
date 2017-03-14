@@ -18,6 +18,13 @@
     (when (.-parentNode target)
       (recur-href (.-parentNode target)))))
 
+(defn- get-href [el]
+  (let [href-attr (.-href el)]
+    (if (and js/window.SVGAnimatedString
+             (= js/SVGAnimatedString (type href-attr)))
+      (.-baseVal href-attr)
+      href-attr)))
+
 (defn- update-history! [h]
   (doto h
     (.setUseFragment false)
@@ -105,7 +112,7 @@
                (on-click
                 (fn [e]
                   (when-let [el (recur-href (-> e .-target))]
-                    (let [uri (.parse Uri (.-href el))]
+                    (let [uri (.parse Uri (get-href el))]
                       ;; Proceed if `identity-fn` returns a value and
                       ;; the user did not trigger the event via one of the
                       ;; keys we should bypass
