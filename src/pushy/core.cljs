@@ -117,6 +117,9 @@
                                  (not (.-shiftKey e))
                                  ;; Bypass if target = _blank
                                  (not (get #{"_blank" "_self"} (.getAttribute el "target")))
+                                 ;; Bypass if explicitly instructed to ignore this element
+                                 (or (not (.hasAttribute el "data-pushy-ignore"))
+                                     (= (.getAttribute el "data-pushy-ignore") "false"))
                                  ;; Bypass dispatch if middle click
                                  (not= 1 (.-button e)))
                         (let [next-token (get-token-from-uri uri)]
