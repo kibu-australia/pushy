@@ -4,8 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.48"]]
+  :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.494" :scope "provided"]]
 
   :aliases {"deploy" ["do" "clean," "deploy" "clojars"]
             "test" ["do" "clean," "with-profile" "dev" "cljsbuild" "test"]}
