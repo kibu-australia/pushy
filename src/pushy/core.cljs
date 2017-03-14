@@ -18,10 +18,10 @@
     (when (.-parentNode target)
       (recur-href (.-parentNode target)))))
 
-(defn- update-history! [h]
+(defn- update-history! [h {:keys [use-fragment path-prefix]}]
   (doto h
-    (.setUseFragment false)
-    (.setPathPrefix "")
+    (.setUseFragment use-fragment)
+    (.setPathPrefix (or path-prefix ""))
     (.setEnabled true)))
 
 (defn- set-retrieve-token! [t]
@@ -36,11 +36,17 @@
           (str path-prefix token)))
   t)
 
+(defn token-transformer []
+  (-> (TokenTransformer.)
+      set-retrieve-token!
+      set-create-url!))
+
 (defn new-history
   ([]
-   (new-history (-> (TokenTransformer.) set-retrieve-token! set-create-url!)))
-  ([transformer]
-   (-> (Html5History. js/window transformer) update-history!)))
+   (new-history {:token-transformer (token-transformer)}))
+  ([{:keys [token-transformer] :as cfg}]
+   (-> (Html5History. js/window token-transformer)
+       (update-history! cfg))))
 
 (defprotocol IHistory
   (set-token! [this token] [this token title])
@@ -55,23 +61,45 @@
            (some? (re-matches (re-pattern (str "^" (.-origin js/location) ".*$"))
                               (str uri))))))
 
-(defn- get-token-from-uri [uri]
+(defn- uri->token [uri]
   (let [path (.getPath uri)
         query (.getQuery uri)]
     ;; Include query string in token
     (if (empty? query) path (str path "?" query))))
 
+(defn- uri-fragment->token [uri]
+  (.getFragment uri))
+
+(defn setup-fragment-config
+  "When `use-fragment' is true, configure pushy for this mode."
+  [{:keys [use-fragment] :as cfg}]
+  (conj cfg (when use-fragment
+              {:token-transformer nil
+               :uri->token-fn uri-fragment->token})))
+
 (defn pushy
   "Takes in three functions:
     * dispatch-fn: the function that dispatches when a match is found
     * match-fn: the function used to check if a particular route exists
-    * identity-fn: (optional) extract the route from value returned by match-fn"
-  [dispatch-fn match-fn &
-   {:keys [processable-url? identity-fn]
-    :or {processable-url? processable-url?
-         identity-fn identity}}]
 
-  (let [history (new-history)
+    Additionaly, takes optional keyword arguments:
+
+    :identity-fn - Extract the route from value returned by match-fn
+    :use-fragment - When true, use fragments (hashes) for single-page
+                    applications."
+  [dispatch-fn match-fn &
+   {:keys [processable-url? identity-fn uri->token-fn]
+    :or {processable-url? processable-url?
+         identity-fn identity
+
+         use-fragment false
+         path-prefix ""
+
+         token-transformer (token-transformer)}
+    :as cfg}]
+
+  (let [{:keys [uri->token-fn] :as cfg} (setup-fragment-config cfg)
+        history (new-history cfg)
         event-keys (atom nil)]
     (reify
       IHistory
@@ -122,7 +150,7 @@
                                      (= (.getAttribute el "data-pushy-ignore") "false"))
                                  ;; Bypass dispatch if middle click
                                  (not= 1 (.-button e)))
-                        (let [next-token (get-token-from-uri uri)]
+                        (let [next-token (uri->token-fn uri)]
                           (when (identity-fn (match-fn next-token))
                             ;; Dispatch!
                             (if-let [title (-> el .-title)]
