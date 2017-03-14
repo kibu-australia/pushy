@@ -13,8 +13,10 @@
   :lein-release {:deploy-via :shell
                  :shell ["lein" "deploy"]}
 
+  :source-paths ["src"]
+
   :profiles {:dev {:dependencies [[secretary "1.2.1"]]
-                   :plugins [[lein-cljsbuild "1.0.5"]
+                   :plugins [[lein-cljsbuild "1.1.5"]
                              [com.cemerick/clojurescript.test "0.3.3"]]
 
                    :cljsbuild
