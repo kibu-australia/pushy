@@ -149,6 +149,6 @@ Likewise, you can call `replace-token!` which will also call the `dispatch` fn a
 
 ## License
 
-Copyright © 2014
+Copyright © 2017
 
 Distributed under the Eclipse Public License either version 1.0
