@@ -13,7 +13,11 @@
 (defn- recur-href
   "Traverses up the DOM tree and returns the first node that contains a href attr"
   [target]
-  (if (.-href target)
+  (if (and (.-href target)
+           ; Use tags do xlinking which uses an href attribute, but
+           ; I can't see any reason why you'd ever want to return a use
+           ; tag here.
+           (not (= (clojure.string/lower-case (.-tagname target)) "use")))
     target
     (when (.-parentNode target)
       (recur-href (.-parentNode target)))))
