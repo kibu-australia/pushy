@@ -18,7 +18,7 @@ You can construct a new instance by calling the `pushy` function.
 * `dispatch` fn: gets called when there is a match
 * `match` fn: checks if the path matches any routes defined.
 
-Optionally, you can specify an `:identity-fn` which parses and returns the route based on the result of the `match` fn. 
+Optionally, you can specify an `:identity-fn` which parses and returns the route based on the result of the `match` fn.
 
 ### Event listeners
 
@@ -123,7 +123,29 @@ pushy should work with any routing library:
 
 #_(pushy/set-token! history "/")
 #_(pushy/set-token! history "/pages")
-            
+```
+
+[Sibiro](https://github.com/aroemers/sibiro)
+
+```clojure
+(ns foo.core
+  (:require [sibiro.core :as sibiro]
+            [pushy.core :as pushy]))
+
+(def state (atom {}))
+
+(defn set-page! [match]
+  (assoc state :page match))
+
+(def routes
+  {[:get "/home" :home]})
+
+(defn match-uri [uri]
+  (:route-handler (sibiro/match-uri (sibiro/compile-routes routes) uri :get)))
+
+(def history (pushy/pushy set-page! match-uri))
+
+(pushy/start! history)
 ```
 
 ### URL handling
