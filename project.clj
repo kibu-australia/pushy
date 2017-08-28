@@ -1,4 +1,4 @@
-(defproject kibu/pushy "0.3.7"
+(defproject kibu/pushy "0.3.8"
   :description "HTML5 pushState for Clojurescript"
   :url "https://github.com/kibu-australia/pushy"
   :license {:name "Eclipse Public License"
