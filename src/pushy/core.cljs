@@ -19,7 +19,9 @@
 (defn- set-retrieve-token! [t]
   (set! (.. t -retrieveToken)
         (fn [path-prefix location]
-          (str (.-pathname location) (.-search location))))
+          (str (.-pathname location)
+               (.-search location)
+               (.-hash location))))
   t)
 
 (defn- set-create-url! [t]
@@ -49,9 +51,11 @@
 
 (defn- get-token-from-uri [uri]
   (let [path (.getPath uri)
-        query (.getQuery uri)]
-    ;; Include query string in token
-    (if (empty? query) path (str path "?" query))))
+        query (.getQuery uri)
+        fragment (.getFragment uri)]
+    (cond-> path
+      (seq query) (str "?" query)
+      (seq fragment) (str "#" fragment))))
 
 (defn pushy
   "Takes in three functions:
