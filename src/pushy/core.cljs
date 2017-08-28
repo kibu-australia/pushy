@@ -59,7 +59,7 @@
     * match-fn: the function used to check if a particular route exists
     * identity-fn: (optional) extract the route from value returned by match-fn"
   [dispatch-fn match-fn &
-   {:keys [processable-url? identity-fn]
+   {:keys [processable-url? identity-fn prevent-default-when-no-match?]
     :or   {processable-url?               processable-url?
            identity-fn                    identity
            prevent-default-when-no-match? (constantly false)}}]
