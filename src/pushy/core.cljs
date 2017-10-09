@@ -11,9 +11,9 @@
   (events/listen js/document "click" funk))
 
 (defn- recur-attr
-  "Traverses up the DOM tree and returns the first node that contains a href, action or formaction attr"
+  "Traverses up the DOM tree and returns the first node that contains a href, action or formAction attr"
   [target]
-  (if (some #(goog.object/get target %) #{"href" "action" "formaction"})
+  (if (some #(goog.object/get target %) #{"href" "formAction"})
     target
     (when (.-parentNode target)
       (recur-attr (.-parentNode target)))))
@@ -106,7 +106,7 @@
                (on-click
                 (fn [e]
                   (when-let [el (recur-attr (-> e .-target))]
-                    (let [uri (.parse Uri (.-href el))]
+                    (let [uri (.parse Uri (some #(goog.object/get el %) #{"href" "formAction"}))]
                       ;; Proceed if `identity-fn` returns a value and
                       ;; the user did not trigger the event via one of the
                       ;; keys we should bypass
