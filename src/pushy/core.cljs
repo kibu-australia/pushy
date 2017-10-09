@@ -10,6 +10,14 @@
 (defn- on-click [funk]
   (events/listen js/document "click" funk))
 
+(defn- recur-attr
+  "Traverses up the DOM tree and returns the first node that contains a href, action or formaction attr"
+  [target]
+  (if (some #(goog.object/get target %) #{"href" "action" "formaction"})
+    target
+    (when (.-parentNode target)
+      (recur-attr (.-parentNode target)))))
+
 (defn- update-history! [h]
   (doto h
     (.setUseFragment false)
@@ -97,7 +105,7 @@
         (swap! event-keys conj
                (on-click
                 (fn [e]
-                  (when-let [el (some-> e .-target (.closest "a"))]
+                  (when-let [el (recur-attr (-> e .-target))]
                     (let [uri (.parse Uri (.-href el))]
                       ;; Proceed if `identity-fn` returns a value and
                       ;; the user did not trigger the event via one of the
