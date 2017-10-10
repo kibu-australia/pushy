@@ -10,13 +10,22 @@
 (defn- on-click [funk]
   (events/listen js/document "click" funk))
 
-(defn- recur-attr
+(defn- on-submit [funk]
+  (events/listen js/document "submit" funk))
+
+(defn- recur-href
   "Traverses up the DOM tree and returns the first node that contains a href, action or formAction attr"
   [target]
-  (if (some #(goog.object/get target %) #{"href" "formAction"})
+  (when (goog.object/get target "href")
+    target))
+
+(defn- recur-action
+  "Traverses up the DOM tree and returns the first node that contains a href, action or formAction attr"
+  [target]
+  (if (goog.object/get target "action")
     target
     (when (.-parentNode target)
-      (recur-attr (.-parentNode target)))))
+      (recur-action (.-parentNode target)))))
 
 (defn- update-history! [h]
   (doto h
@@ -47,7 +56,8 @@
   (replace-token! [this token] [this token title])
   (get-token [this])
   (start! [this])
-  (stop! [this]))
+  (stop! [this])
+  (get-event-keys [this]))
 
 (defn- processable-url? [uri]
   (and (not (clojure.string/blank? uri))                    ;; Blank URLs are not processable.
@@ -86,6 +96,9 @@
       (replace-token! [_ token title]
         (. history (replaceToken token title)))
 
+      (get-event-keys [_]
+        event-keys)
+
       (get-token [_]
         (.getToken history))
 
@@ -105,8 +118,8 @@
         (swap! event-keys conj
                (on-click
                 (fn [e]
-                  (when-let [el (recur-attr (-> e .-target))]
-                    (let [uri (.parse Uri (some #(goog.object/get el %) #{"href" "formAction"}))]
+                  (when-let [el (recur-href (-> e .-target))]
+                    (let [uri (.parse Uri (goog.object/get el "href"))]
                       ;; Proceed if `identity-fn` returns a value and
                       ;; the user did not trigger the event via one of the
                       ;; keys we should bypass
@@ -134,6 +147,23 @@
 
                             (when (prevent-default-when-no-match? next-token)
                               (.preventDefault e))))))))))
+        (swap! event-keys conj
+               (on-submit
+                 (fn [e]
+                   (when-let [el (recur-action (-> e .-target))]
+                     (let [uri (.parse Uri (goog.object/get el "action"))]
+                       (when (processable-url? uri)
+                         (let [next-token (get-token-from-uri uri)]
+                           (if (identity-fn (match-fn next-token))
+                             ;; Dispatch!
+                             (do
+                               (if-let [title (-> el .-title)]
+                                 (set-token! this next-token title)
+                                 (set-token! this next-token))
+                               (doto e (.preventDefault) #_(.stopPropagation)))
+
+                             (when (prevent-default-when-no-match? next-token)
+                               (doto e (.preventDefault) #_(.stopPropagation)))))))))))
         nil)
 
       (stop! [this]
