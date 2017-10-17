@@ -16,8 +16,10 @@
 (defn- recur-href
   "Traverses up the DOM tree and returns the first node that contains a href, action or formAction attr"
   [target]
-  (when (goog.object/get target "href")
-    target))
+  (if (goog.object/get target "href")
+    target
+    (when (.-parentNode target)
+      (recur-href (.-parentNode target)))))
 
 (defn- recur-action
   "Traverses up the DOM tree and returns the first node that contains a href, action or formAction attr"
@@ -147,6 +149,7 @@
 
                             (when (prevent-default-when-no-match? next-token)
                               (.preventDefault e))))))))))
+
         (swap! event-keys conj
                (on-submit
                  (fn [e]
@@ -160,10 +163,10 @@
                                (if-let [title (-> el .-title)]
                                  (set-token! this next-token title)
                                  (set-token! this next-token))
-                               (doto e (.preventDefault) #_(.stopPropagation)))
+                               (.preventDefault e))
 
                              (when (prevent-default-when-no-match? next-token)
-                               (doto e (.preventDefault) #_(.stopPropagation)))))))))))
+                               (.preventDefault e))))))))))
         nil)
 
       (stop! [this]
