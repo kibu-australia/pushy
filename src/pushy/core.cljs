@@ -59,18 +59,23 @@
     * match-fn: the function used to check if a particular route exists
     * identity-fn: (optional) extract the route from value returned by match-fn"
   [dispatch-fn match-fn &
-   {:keys [processable-url? identity-fn prevent-default-when-no-match?]
+   {:keys [processable-url? identity-fn prevent-default-when-no-match? dispatch-on-match?]
     :or   {processable-url?               processable-url?
            identity-fn                    identity
-           prevent-default-when-no-match? (constantly false)}}]
+           prevent-default-when-no-match? (constantly false)
+           dispatch-on-match? (constantly false)}}]
 
   (let [history (new-history)
         event-keys (atom nil)]
     (reify
       IHistory
       (set-token! [_ token]
+        (when (and (dispatch-on-match? token) (= token (.getToken history)))
+          (. history (replaceToken token)))
         (. history (setToken token)))
       (set-token! [_ token title]
+        (when (and (dispatch-on-match? token) (= token (.getToken history)))
+          (. history (replaceToken token title)))
         (. history (setToken token title)))
 
       (replace-token! [_ token]
