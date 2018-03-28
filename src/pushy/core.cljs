@@ -1,5 +1,6 @@
 (ns pushy.core
-  (:require [goog.events :as events]
+  (:require [goog.dom :as dom]
+            [goog.events :as events]
             [clojure.string])
   (:import goog.History
            goog.history.Html5History
@@ -97,7 +98,7 @@
         (swap! event-keys conj
                (on-click
                 (fn [e]
-                  (when-let [el (some-> e .-target (.closest "a"))]
+                  (when-let [el (some-> e .-target (dom/getAncestorByTagNameAndClass "a" nil nil))]
                     (let [uri (.parse Uri (.-href el))]
                       ;; Proceed if `identity-fn` returns a value and
                       ;; the user did not trigger the event via one of the
