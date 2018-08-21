@@ -88,7 +88,7 @@
                (events/listen history EventType.NAVIGATE
                               (fn [e]
                                 (when-let [match (-> (.-token e) match-fn identity-fn)]
-                                  (dispatch-fn match)))))
+                                  (dispatch-fn match (.-isNavigation e))))))
 
         ;; Dispatch on initialization
         (when-let [match (-> (get-token this) match-fn identity-fn)]
