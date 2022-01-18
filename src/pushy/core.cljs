@@ -7,9 +7,6 @@
            goog.history.EventType
            goog.Uri))
 
-(defn- on-click [funk]
-  (events/listen js/document "click" funk))
-
 (defn- update-history! [h]
   (doto h
     (.setUseFragment false)
@@ -19,7 +16,7 @@
 (defn- set-retrieve-token! [t]
   (set! (.. t -retrieveToken)
         (fn [path-prefix location]
-          (str (.-pathname location) (.-search location))))
+          (str (.-pathname location) (.-search location) (.-hash location))))
   t)
 
 (defn- set-create-url! [t]
@@ -39,7 +36,8 @@
   (replace-token! [this token] [this token title])
   (get-token [this])
   (start! [this])
-  (stop! [this]))
+  (stop! [this])
+  (on-click! [this e]))
 
 (defn- processable-url? [uri]
   (and (not (clojure.string/blank? uri))                    ;; Blank URLs are not processable.
@@ -47,24 +45,33 @@
            (some? (re-matches (re-pattern (str "^" (.-origin js/location) ".*$"))
                               (str uri))))))
 
-(defn- get-token-from-uri [uri]
+(defn- get-token-from-uri
+  "Returns /path?query#fragment from uri"
+  [uri]
   (let [path (.getPath uri)
-        query (.getQuery uri)]
-    ;; Include query string in token
-    (if (empty? query) path (str path "?" query))))
+        query (.getQuery uri)
+        fragment (.getFragment uri)]
+    (str path
+         (when (seq query)
+           (str "?" query))
+         (when (seq fragment)
+           (str "#" fragment)))))
 
 (defn pushy
   "Takes in three functions:
     * dispatch-fn: the function that dispatches when a match is found
     * match-fn: the function used to check if a particular route exists
-    * identity-fn: (optional) extract the route from value returned by match-fn"
+    * identity-fn: (optional) extract the route from value returned by match-fn
+    * skip-on-click: if pushy should skip registering on-click handler"
   [dispatch-fn match-fn &
-   {:keys [processable-url? identity-fn prevent-default-when-no-match?]
+   {:keys [processable-url? identity-fn prevent-default-when-no-match?
+           skip-on-click]
     :or   {processable-url?               processable-url?
            identity-fn                    identity
-           prevent-default-when-no-match? (constantly false)}}]
+           prevent-default-when-no-match? (constantly false)
+           skip-on-click                  false}}]
 
-  (let [history (new-history)
+  (let [history    (new-history)
         event-keys (atom nil)]
     (reify
       IHistory
@@ -85,53 +92,55 @@
         (stop! this)
         ;; We want to call `dispatch-fn` on any change to the location
         (swap! event-keys conj
-               (events/listen history EventType.NAVIGATE
-                              (fn [e]
-                                (when-let [match (-> (.-token e) match-fn identity-fn)]
-                                  (dispatch-fn match)))))
+          (events/listen history EventType.NAVIGATE
+            (fn [e]
+              (when-let [match (-> (.-token e) match-fn identity-fn)]
+                (dispatch-fn match)))))
 
         ;; Dispatch on initialization
         (when-let [match (-> (get-token this) match-fn identity-fn)]
           (dispatch-fn match))
 
-        (swap! event-keys conj
-               (on-click
-                (fn [e]
-                  (when-let [el (some-> e .-target (.closest "a"))]
-                    (let [uri (.parse Uri (.-href el))]
-                      ;; Proceed if `identity-fn` returns a value and
-                      ;; the user did not trigger the event via one of the
-                      ;; keys we should bypass
-                      (when (and (processable-url? uri)
-                                 ;; Bypass dispatch if any of these keys
-                                 (not (.-altKey e))
-                                 (not (.-ctrlKey e))
-                                 (not (.-metaKey e))
-                                 (not (.-shiftKey e))
-                                 ;; Bypass if target = _blank
-                                 (not (get #{"_blank" "_self"} (.getAttribute el "target")))
-                                 ;; Bypass if explicitly instructed to ignore this element
-                                 (or (not (.hasAttribute el "data-pushy-ignore"))
-                                     (= (.getAttribute el "data-pushy-ignore") "false"))
-                                 ;; Only dispatch on left button click
-                                 (= 0 (.-button e)))
-                        (let [next-token (get-token-from-uri uri)]
-                          (if (identity-fn (match-fn next-token))
-                            ;; Dispatch!
-                            (do
-                              (if-let [title (-> el .-title)]
-                                (set-token! this next-token title)
-                                (set-token! this next-token))
-                              (.preventDefault e))
-
-                            (when (prevent-default-when-no-match? next-token)
-                              (.preventDefault e))))))))))
+        (when-not skip-on-click
+          (swap! event-keys conj
+            (events/listen js/document "click" #(on-click! this %))))
         nil)
 
       (stop! [this]
         (doseq [key @event-keys]
           (events/unlistenByKey key))
-        (reset! event-keys nil)))))
+        (reset! event-keys nil))
+
+      (on-click! [this e]
+        (when-let [el (some-> e .-target (.closest "a"))]
+          (let [uri (.parse Uri (.-href el))]
+            ;; Proceed if `identity-fn` returns a value and
+            ;; the user did not trigger the event via one of the
+            ;; keys we should bypass
+            (when (and (processable-url? uri)
+                       ;; Bypass dispatch if any of these keys
+                       (not (.-altKey e))
+                       (not (.-ctrlKey e))
+                       (not (.-metaKey e))
+                       (not (.-shiftKey e))
+                       ;; Bypass if target = _blank
+                       (not (get #{"_blank" "_self"} (.getAttribute el "target")))
+                       ;; Bypass if explicitly instructed to ignore this element
+                       (or (not (.hasAttribute el "data-pushy-ignore"))
+                           (= (.getAttribute el "data-pushy-ignore") "false"))
+                       ;; Only dispatch on left button click
+                       (= 0 (.-button e)))
+              (let [next-token (get-token-from-uri uri)]
+                (if (identity-fn (match-fn next-token))
+                  ;; Dispatch!
+                  (do
+                    (if-let [title (-> el .-title)]
+                      (set-token! this next-token title)
+                      (set-token! this next-token))
+                    (.preventDefault e))
+
+                  (when (prevent-default-when-no-match? next-token)
+                    (.preventDefault e)))))))))))
 
 (defn supported?
   "Returns whether Html5History is supported"

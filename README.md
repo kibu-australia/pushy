@@ -5,7 +5,7 @@ A Clojurescript library for quick and easy HTML5 pushState.
 
 ## Install
 
-[![Clojars Project](http://clojars.org/kibu/pushy/latest-version.svg)](http://clojars.org/kibu/pushy)
+[![Clojars Project](http://clojars.org/ua.kasta/pushy/latest-version.svg)](http://clojars.org/ua.kasta/pushy)
 
 ## Usage
 
